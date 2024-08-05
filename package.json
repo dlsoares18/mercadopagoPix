@@ -1,0 +1,17 @@
+{
+  "name": "mercadopagopix",
+  "version": "1.0.0",
+  "description": "Mercado pago pix",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "author": "Daniel Soares",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mercadopago": "^2.0.11"
+  }
+}
