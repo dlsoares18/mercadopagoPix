@@ -1,129 +1,86 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Criar Cobrança PIX - Mercado Pago</title>
+  <meta charset="UTF-8">
+  <title>Pagamento PIX - Mercado Pago</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
       max-width: 500px;
-      margin: auto;
+      margin: 40px auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
     }
     label {
       display: block;
-      margin-top: 15px;
+      margin-top: 10px;
     }
-    input {
+    input, button {
       width: 100%;
       padding: 8px;
       margin-top: 5px;
     }
-    button {
+    #qr {
       margin-top: 20px;
-      padding: 10px;
-      background-color: #009ee3;
-      color: white;
-      border: none;
-      cursor: pointer;
-      width: 100%;
-    }
-    #resultado {
-      margin-top: 30px;
       text-align: center;
     }
     img {
-      margin-top: 15px;
       max-width: 100%;
     }
-    .copy-btn {
-      background-color: #4CAF50;
-      margin-top: 10px;
-    }
-    a {
-      word-break: break-all;
+    code {
+      word-wrap: break-word;
     }
   </style>
 </head>
 <body>
+  <h2>Pagamento via PIX</h2>
 
-  <h1>Criar Cobrança PIX</h1>
+  <label for="email">Email do Pagador</label>
+  <input type="email" id="email" required value="danielleonardo@outlook.com">
 
-  <form id="pixForm">
-    <label for="amount">Valor (R$):</label>
-    <input type="number" step="0.01" id="amount" required />
+  <label for="descricao">Descrição</label>
+  <input type="text" id="descricao" required value="Teste API PIX">
 
-    <label for="description">Descrição:</label>
-    <input type="text" id="description" required />
+  <label for="valor">Valor (R$)</label>
+  <input type="number" id="valor" step="0.01" required value="30.50">
 
-    <label for="email">E-mail do Pagador:</label>
-    <input type="email" id="email" required />
+  <button onclick="enviarPagamento()">Gerar PIX</button>
 
-    <button type="submit">Criar Pagamento</button>
-  </form>
-
-  <div id="resultado"></div>
+  <div id="qr"></div>
 
   <script>
-    document.getElementById('pixForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const amount = parseFloat(document.getElementById('amount').value);
-      const description = document.getElementById('description').value;
+    async function enviarPagamento() {
       const email = document.getElementById('email').value;
+      const descricao = document.getElementById('descricao').value;
+      const valor = parseFloat(document.getElementById('valor').value);
 
-      const resultado = document.getElementById('resultado');
-      resultado.innerHTML = 'Processando pagamento...';
+      const resposta = await fetch('http://localhost:3000/pagar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          payer_email: email,
+          description: descricao,
+          transaction_amount: valor
+        })
+      });
 
-      try {
-        const res = await fetch('http://localhost:3000/pagamento', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            transaction_amount: amount,
-            description,
-            payment_method_id: 'pix',
-            payer: { email },
-          }),
-        });
+      const data = await resposta.json();
 
-        const data = await res.json();
-
-        const qrBase64 = data?.point_of_interaction?.transaction_data?.qr_code_base64;
-        const qrCode = data?.point_of_interaction?.transaction_data?.qr_code;
-        const ticketUrl = data?.point_of_interaction?.transaction_data?.ticket_url;
-
-        if (qrBase64 && qrCode && ticketUrl) {
-          resultado.innerHTML = `
-            <h2>Pagamento Criado!</h2>
-            <img src="data:image/png;base64,${qrBase64}" alt="QR Code PIX" />
-            <p><strong>Link do pagamento:</strong><br>
-              <a href="${ticketUrl}" target="_blank">${ticketUrl}</a>
-            </p>
-            <p><strong>Código PIX:</strong></p>
-            <textarea id="pixCode" rows="4" style="width:100%;">${qrCode}</textarea>
-            <button class="copy-btn" onclick="copiarPix()">Copiar Código PIX</button>
-          `;
-        } else {
-          resultado.innerHTML = '<p>Erro ao gerar dados do PIX.</p>';
-          console.error('Dados incompletos:', data);
-        }
-      } catch (err) {
-        resultado.innerHTML = '<p style="color:red;">Erro ao processar pagamento.</p>';
-        console.error(err);
+      const qrDiv = document.getElementById('qr');
+      if (data.point_of_interaction?.transaction_data?.qr_code_base64) {
+        qrDiv.innerHTML = `
+          <h3>Escaneie o QR Code</h3>
+          <img src="data:image/png;base64,${data.point_of_interaction.transaction_data.qr_code_base64}" alt="QR Code PIX">
+          <h4>Código PIX</h4>
+          <code>${data.point_of_interaction.transaction_data.qr_code}</code>
+        `;
+      } else {
+        qrDiv.innerHTML = `<p>Erro: ${JSON.stringify(data)}</p>`;
       }
-    });
-
-    function copiarPix() {
-      const pixCode = document.getElementById('pixCode');
-      pixCode.select();
-      document.execCommand('copy');
-      alert('Código PIX copiado!');
     }
   </script>
-
 </body>
 </html>
